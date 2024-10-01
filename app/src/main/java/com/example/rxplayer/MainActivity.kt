@@ -6,8 +6,15 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.animation.AnimationUtils
+import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -25,12 +32,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPlayPause: ImageButton
     private lateinit var btnNext: ImageButton
     private lateinit var btnPrev: ImageButton
+    private lateinit var etSearch: EditText
+    private lateinit var seekBar: SeekBar
 
     private lateinit var songList: ArrayList<Song>
     private lateinit var songAdapter: SongAdapter
 
     private var mediaPlayer: MediaPlayer? = null
     private var currentSongIndex: Int = -1
+    private val handler = Handler(Looper.getMainLooper())
+    private var isSeekBarTracking = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,10 +53,38 @@ class MainActivity : AppCompatActivity() {
         btnPlayPause = findViewById(R.id.btnPlayPause)
         btnNext = findViewById(R.id.btnNext)
         btnPrev = findViewById(R.id.btnPrev)
+        etSearch = findViewById(R.id.etSearch)
+        seekBar = findViewById(R.id.seekBar)
 
         if (checkPermission()) {
             loadMusic()
         }
+
+        // Handle SeekBar progress change
+
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser) {
+                            mediaPlayer?.seekTo(progress)
+                        }
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                        isSeekBarTracking = true
+                    }
+
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                        isSeekBarTracking = false
+                    }
+                })
+        // Set up search functionality
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterSongs(s.toString())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
         btnPlayPause.setOnClickListener {
             if (mediaPlayer?.isPlaying == true) {
@@ -93,6 +132,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    // When the song is played or the title is updated
+    private fun updateSongTitle(songTitle: String) {
+        val tvSongTitle: TextView = findViewById(R.id.tvSongTitle)
+        tvSongTitle.text = songTitle
+        // Load the slide-in animation
+        val slideInAnimation = AnimationUtils.loadAnimation(this, R.anim.slide_in_left)
+
+        // Optionally, also load the fade-in animation if you want
+        val fadeInAnimation = AnimationUtils.loadAnimation(this, R.anim.fade_in)
+
+        // Apply the slide-in animation to the TextView
+        tvSongTitle.startAnimation(slideInAnimation)
+
+        // Apply the fade-in animation if you want it to fade
+        tvSongTitle.startAnimation(fadeInAnimation)
+
+    }
+
 
     // Permission methods...
 
@@ -112,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                     val data = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA))
                     val duration = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION))
 
-                    // For album art (optional)
+                    // Get album art
                     val albumId = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID))
                     val sArtworkUri = Uri.parse("content://media/external/audio/albumart")
                     val albumArtUri = ContentUris.withAppendedId(sArtworkUri, albumId).toString()
@@ -141,6 +198,17 @@ class MainActivity : AppCompatActivity() {
             adapter = songAdapter
         }
     }
+    private fun filterSongs(query: String) {
+        val filteredList = songList.filter { song ->
+            song.title.contains(query, ignoreCase = true) || song.artist.contains(query, ignoreCase = true)
+        }
+        songAdapter = SongAdapter(this, ArrayList(filteredList), object : SongAdapter.OnSongClickListener {
+            override fun onSongClick(position: Int) {
+                playSong(position)
+            }
+        })
+        recyclerViewSongs.adapter = songAdapter
+    }
 
     private fun playSong(position: Int) {
         // Reset and release MediaPlayer if it's already playing
@@ -156,6 +224,18 @@ class MainActivity : AppCompatActivity() {
             prepare()
             start()
         }
+        // Set the song title with animation
+        updateSongTitle(song.title)
+
+        // Update the play/pause button icon
+        btnPlayPause.setImageResource(R.drawable.ic_pause)
+        // Set up seek bar maximum and update UI
+        seekBar.max = mediaPlayer!!.duration
+        tvSongTitle.text = song.title
+        btnPlayPause.setImageResource(R.drawable.ic_pause)
+
+        // Update SeekBar progress
+        updateSeekBar()
 
         // Update UI
         tvSongTitle.text = song.title
@@ -175,6 +255,15 @@ class MainActivity : AppCompatActivity() {
     private fun playPreviousSong() {
         currentSongIndex = if (currentSongIndex - 1 < 0) songList.size - 1 else currentSongIndex - 1
         playSong(currentSongIndex)
+    }
+    // Update the SeekBar as the song progresses
+    private fun updateSeekBar() {
+        if (!isSeekBarTracking) {
+            seekBar.progress = mediaPlayer?.currentPosition ?: 0
+        }
+
+        // Update every second
+        handler.postDelayed({ updateSeekBar() }, 1000)
     }
 
     override fun onDestroy() {

@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:padding="16dp"
     >
+    <ImageView
+        android:id="@+id/ivAlbumArt"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="16dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_music_note" />
     <TextView
         android:id="@+id/tvSongTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Song Title"
         android:textSize="16sp"
-        android:textColor="@android:color/black"/>
+        android:textColor="@android:color/white"/>
 
     <TextView
         android:id="@+id/tvArtist"
@@ -18,6 +26,6 @@
         android:layout_height="wrap_content"
         android:text="Artist"
         android:textSize="14sp"
-        android:textColor="@android:color/darker_gray"/>
+        android:textColor="@android:color/white"/>
 
 </LinearLayout>
