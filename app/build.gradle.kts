@@ -53,5 +53,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation (libs.androidx.recyclerview)
     implementation (libs.glide)
+    implementation(libs.navigation.fragment)
+
 
 }

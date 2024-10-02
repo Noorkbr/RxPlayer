@@ -1,6 +1,7 @@
 package com.example.rxplayer
 
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.net.Uri
@@ -219,6 +220,11 @@ class MainActivity : AppCompatActivity() {
 
         currentSongIndex = position
         val song = songList[position]
+        val intent = Intent(this, NowPlayingActivity::class.java)
+        intent.putExtra("SONG_TITLE", song.title)
+        intent.putExtra("ARTIST_NAME", song.artist)
+        intent.putExtra("ALBUM_ART", song.albumArt) // Optional: Pass URI or resource ID for album art
+        startActivity(intent)
         mediaPlayer = MediaPlayer().apply {
             setDataSource(song.data)
             prepare()
